@@ -29,7 +29,7 @@ The goal is to build an anlytics workflow that transforms raw data into reliable
 
 1. [Week 1](#week-1): Create new GitHub repo and clone into IDE using VSCode.
 2. [Week 2](#week-2)
-
+2. [Week 3](#week-3)
 
 ## Project Workflow
 
