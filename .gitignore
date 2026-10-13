@@ -1,0 +1,16 @@
+# Python virtual environment
+.venv/
+
+# dbt generated files
+**/target/
+**/dbt_packages/
+**/logs/
+
+# Database credentials
+profiles.yml
+.env
+.env.*
+
+# Python cache
+__pycache__/
+*.pyc
