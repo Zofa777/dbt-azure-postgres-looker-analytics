@@ -109,3 +109,88 @@ CREATE TABLE stg.people (
 7. Import CSV files into your database all files using mapping:
 - Right click on table > Import Data > Import From CSV file(s)
 - Choose appropriate file and finish
+ 
+## Week 3 — dbt Core Setup and Staging Models
+
+### Objective
+Set up dbt Core with Azure PostgreSQL, create staging models, and configure separate development and production environments.
+
+### Step 1 — Install and Initialize dbt Core
+
+1. Create a Python virtual environment (`.venv`).
+2. Activate the virtual environment.
+3. Install `dbt-postgres` using pip.
+4. Initialize a new dbt project named `superstore_dbt`.
+5. Configure the PostgreSQL connection in `~/.dbt/profiles.yml`.
+6. Run `dbt debug` to verify the connection.
+
+### Step 2 — Configure dbt Sources
+
+1. Create a `sources.yml` file inside the `models/` directory.
+2. Define a source named `superstore`.
+3. Specify the database `surfalytics_dw_zafar` and schema `stg`.
+4. Declare three source tables: `orders`, `returns`, and `people`.
+5. Run `dbt ls --resource-type source` to verify the source definitions.
+
+### Step 3 — Create Staging Models
+
+1. Create a `stg` folder inside the `models/` directory.
+2. Create three SQL models:
+   - `stg_orders.sql`
+   - `stg_returns.sql`
+   - `stg_people.sql`
+3. Use the `source()` function to reference the corresponding PostgreSQL tables.
+4. Configure each model as a view using `{{ config(materialized='view') }}`.
+5. Run `dbt build --select path:models/stg` to build the staging models.
+
+### Step 4 — Add Surrogate Keys and Timestamps
+
+1. Create a `packages.yml` file in the dbt project directory.
+2. Add the `dbt_utils` package.
+3. Run `dbt deps` to install the package.
+4. Use `dbt_utils.generate_surrogate_key()` to generate a `dwh_id` column in each staging model.
+5. Add an `etl_timestamp` column using `CURRENT_TIMESTAMP`.
+6. Rebuild the staging models to apply the changes.
+
+**Note:** When using views, `CURRENT_TIMESTAMP` returns the query execution time rather than a stored data-loading timestamp.
+
+### Step 5 — Configure DEV and PROD Environments
+
+1. Open `~/.dbt/profiles.yml`.
+2. Configure two targets:
+   - `dev` — use the `dbt_dev` schema.
+   - `prod` — use the `dbt_prod` schema.
+3. Set `dev` as the default target.
+4. Verify both connections:
+
+   ```bash
+   dbt debug --target dev
+   dbt debug --target prod
+   ```
+
+5. Build the staging models in the production schema:
+
+   ```bash
+   dbt build --target prod --select path:models/stg
+   ```
+
+6. Open DBeaver and verify that the three staging views exist in both `dbt_dev` and `dbt_prod`.
+
+### Step 6 — Configure Git Ignore
+
+1. Create a `.gitignore` file in the repository root.
+2. Add `.venv/` to exclude the Python virtual environment.
+3. Exclude dbt-generated directories such as `target/`, `dbt_packages/`, and `logs/`.
+4. Exclude `profiles.yml`, `.env` files, and Python cache files.
+5. Run `git status` to verify which files Git detects.
+
+### Step 7 — Commit and Push Week 3 Changes
+
+1. Switch to the `week3` branch.
+2. Update `README.md` with the Week 3 documentation.
+3. Stage the project files using `git add`.
+4. Review the staged files to ensure credentials and generated files are excluded.
+5. Commit the changes with a descriptive message.
+6. Push the `week3` branch to GitHub.
+7. Create a Pull Request from `week3` into `main`.
+8. Review and merge the Pull Request.
