@@ -1,0 +1,13 @@
+version: 2
+
+sources:
+  - name: superstore
+    database: surfalytics_dw_zafar
+    schema: stg
+
+    tables:
+      - name: orders
+      - name: returns
+      - name: people
+
+   
