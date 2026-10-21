@@ -8,6 +8,7 @@
 
 # Database credentials
 profiles.yml
+!.github/dbt/profiles.yml
 .env
 .env.*
 
