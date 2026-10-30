@@ -1,0 +1,42 @@
+version: 2
+
+models:
+  - name: stg_returns
+    description: "Bronze model containing returned Superstore orders"
+
+    columns:
+      - name: order_id
+        description: "Order identifier referencing stg_orders"
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_orders')
+                field: order_id
+  - name: stg_orders
+    description: "Bronze model containing Superstore order records"
+
+    columns:
+      - name: dwh_id
+        description: "Surrogate key generated from row_id"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: order_id
+        description: "Business identifier of the customer order"
+        data_tests:
+          - not_null
+
+      - name: ship_mode
+        description: "Shipping method selected for the order"
+        data_tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - "First Class"
+                  - "Second Class"
+                  - "Standard Class"
+                  - "Same Day"
+  - name: stg_people
+    description: "Bronze model containing Superstore regional manager information"
