@@ -1,0 +1,38 @@
+version: 2
+
+models:
+  - name: int_orders_cleaned
+    description: "Cleans order quantities for downstream analytics."
+    config:
+      meta:
+        owner: "Analytics engineering"
+        business_domain: "Sales"
+        layer: "silver"
+
+    columns:
+      - name: row_id
+        description: "Unique identifier of an order line."
+
+      - name: order_id
+        description: "Business identifier of the customer order."
+
+      - name: quantity
+        description: "{{doc('cleaned_order_quantity')}}"
+
+unit_tests:
+  - name: test_int_orders_cleaned_quantity
+    description: "Verify that zero and negative quantities become 1."
+    model: int_orders_cleaned
+
+    given:
+      - input: ref('stg_orders')
+        rows:
+          - {row_id: 1, order_id: "ORD-001", quantity: 5}
+          - {row_id: 2, order_id: "ORD-002", quantity: 0}
+          - {row_id: 3, order_id: "ORD-003", quantity: -3}
+
+    expect:
+      rows:
+        - {row_id: 1, order_id: "ORD-001", quantity: 5}
+        - {row_id: 2, order_id: "ORD-002", quantity: 1}
+        - {row_id: 3, order_id: "ORD-003", quantity: 1}

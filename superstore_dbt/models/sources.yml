@@ -9,3 +9,15 @@ sources:
       - name: orders
       - name: returns
       - name: people
+
+
+      - name: freshness_demo
+        config:
+          loaded_at_field: loaded_at
+          freshness:
+            warn_after:
+              count: 1
+              period: hour
+            error_after:
+              count: 24
+              period: hour

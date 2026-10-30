@@ -3,6 +3,7 @@
 
 # dbt generated files
 **/target/
+**/target_prod/
 **/dbt_packages/
 **/logs/
 
@@ -11,6 +12,7 @@ profiles.yml
 !.github/dbt/profiles.yml
 .env
 .env.*
+.user.yml
 
 # Python cache
 __pycache__/
