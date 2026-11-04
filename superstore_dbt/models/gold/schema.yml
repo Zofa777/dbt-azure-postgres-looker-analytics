@@ -1,0 +1,230 @@
+version: 2
+
+models:
+  - name: dim_customer
+    description: "Customer dimension containing one row per customer."
+
+    columns:
+      - name: customer_key
+        description: "Surrogate key generated from customer_id."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_id
+        description: "Original business identifier of the customer."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: customer_name
+        description: "Customer full name"
+        data_tests:
+          - not_null
+
+  - name: dim_product
+    description: "Product dimension with one row per unique product ID and product name combination."
+
+    columns:
+      - name: product_key
+        description: "Surrogate key generated from product_id and product_name."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: product_id
+        description: "Original product identifier."
+        data_tests:
+          - not_null
+
+      - name: product_name
+        description: "Product name."
+        data_tests:
+          - not_null
+
+      - name: category
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Furniture
+                  - Office Supplies
+                  - Technology
+
+      - name: sub_category
+        data_tests:
+          - not_null
+
+
+  - name: dim_shipping
+    description: "Shipping dimension containing unique shipping methods."
+
+    columns:
+      - name: shipping_id
+        description: "Unique surrogate key generated from the shipping mode."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: ship_mode
+        description: "Shipping method used to deliver an order."
+        data_tests:
+          - unique
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Standard Class
+                  - Second Class
+                  - First Class
+                  - Same Day
+
+      - name: etl_timestamp
+        description: "Timestamp when the dimension was built."
+        data_tests:
+          - not_null
+
+
+  - name: dim_geo
+    description: "Geographic dimension with one row per unique location."
+
+    columns:
+      - name: geo_id
+        description: "Surrogate key generated from geographic attributes."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: country_region
+        description: "Country associated with the location."
+        data_tests:
+          - not_null
+
+      - name: state
+        description: "State associated with the location."
+        data_tests:
+          - not_null
+
+      - name: city
+        description: "City associated with the location."
+        data_tests:
+          - not_null
+
+      - name: postal_code
+        description: "Postal code associated with the location."
+        data_tests:
+          - not_null
+
+      - name: region
+        description: "Sales region associated with the location."
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - Central
+                  - East
+                  - South
+                  - West
+
+      - name: etl_timestamp
+        description: "Timestamp when the dimension was built."
+        data_tests:
+          - not_null
+
+
+
+  - name: fct_sales
+    description: "Sales fact table aggregated by product, customer, shipping, geography, and date."
+
+    columns:
+      - name: sales_key
+        description: "Unique surrogate key for each fact record."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: product_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product_key
+
+      - name: customer_key
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_customer')
+                field: customer_key
+
+      - name: shipping_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_shipping')
+                field: shipping_id
+
+      - name: geo_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_geo')
+                field: geo_id
+
+      - name: date_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('calendar')
+                field: date_id
+
+      - name: sales_amt
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: orders_number
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: items_number
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: profit_amt
+        data_tests:
+          - not_null
+
+      - name: profit_margin_pct
+        data_tests:
+          - not_null
+
+      - name: avg_discount_pct
+        data_tests:
+          - not_null
+
+      - name: avg_selling_price
+        data_tests:
+          - not_null
+          - dbt_utils.expression_is_true:
+              arguments:
+                expression: "> 0"
+
+      - name: etl_timestamp
+        data_tests:
+          - not_null

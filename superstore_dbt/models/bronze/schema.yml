@@ -38,5 +38,14 @@ models:
                   - "Second Class"
                   - "Standard Class"
                   - "Same Day"
+
+      - name: quantity
+        description: "Number of items in an order line"
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+
   - name: stg_people
     description: "Bronze model containing Superstore regional manager information"

@@ -23,7 +23,7 @@ repos:
     rev: v2.0.8
     hooks:
       - id: check-model-has-description
-        files: ^superstore_dbt/models/bronze/.*\.sql$
+        files: ^superstore_dbt/models/(bronze|silver|gold)/.*\.sql$
         args:
           - --manifest
           - superstore_dbt/target/manifest.json
