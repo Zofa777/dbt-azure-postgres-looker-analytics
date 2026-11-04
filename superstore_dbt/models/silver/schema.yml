@@ -1,0 +1,57 @@
+version: 2
+
+models:
+  - name: int_returns_deduplicated
+    description: "Deduplicated returned orders with one row per order_id"
+
+    columns:
+      - name: dwh_id
+        description: "Surrogate key generated from order_id"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: order_id
+        description: "Unique identifier of a returned order"
+        data_tests:
+          - unique
+          - not_null
+
+      - name: returned
+        description: "Return status of the order"
+        data_tests:
+          - not_null
+
+  - name: int_orders_enriched
+    description: "Enriched Silver order-line model combining orders, calendar, regional managers, and return information."
+
+    columns:
+      - name: dwh_id
+        description: "Unique surrogate key for each order line."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: row_id
+        description: "Original unique identifier of each order line."
+        data_tests:
+          - unique
+          - not_null
+
+      - name: date_id
+        description: "Date identifier from the calendar seed."
+        data_tests:
+          - not_null
+
+      - name: quantity
+        description: "Cleaned order quantity."
+        data_tests:
+          - not_null
+          - dbt_expectations.expect_column_values_to_be_between:
+              arguments:
+                min_value: 1
+
+      - name: regional_manager
+        description: "Regional manager assigned to the order."
+        data_tests:
+          - not_null

@@ -743,3 +743,258 @@ pre-commit run --all-files
 All seven general hooks passed. The dbt-checkpoint hook passed separately; final validation of all eight hooks together is pending.
 
 **Key learning:** Pre-commit automates formatting, security, SQL linting, and dbt documentation checks, helping catch issues before code is committed to GitHub.
+
+
+## Week 6 — Dimensional Modeling, Star Schema & Data Quality
+
+### Overview
+
+During Week 6, I expanded my end-to-end analytics project by implementing dimensional modeling using **dbt Core and Azure PostgreSQL**.
+
+The main objective was to transform cleaned Superstore transactional data into analytics-ready fact and dimension tables following a **star schema architecture**.
+
+The implementation includes:
+
+- Creating and loading a calendar seed.
+- Installing and managing additional dbt packages.
+- Improving Bronze-layer data quality tests.
+- Building Silver-layer transformations and joins.
+- Creating four dimension tables and one fact table.
+- Implementing surrogate keys and business metrics.
+- Validating data quality and aggregation results.
+- Generating dbt documentation and reviewing the DAG.
+- Creating logical and physical star schema diagrams in DBeaver.
+
+---
+
+### 1. Calendar Seed
+
+Created `superstore_dbt/seeds/calendar.csv` to learn how dbt seeds load static CSV files into a data warehouse.
+
+The calendar contains **1,461 dates**, covering January 1, 2018, through December 31, 2021.
+
+**Calendar columns:**
+
+| Column | Description |
+|---|---|
+| `date_id` | Unique date identifier |
+| `full_date` | Calendar date |
+| `year` | Calendar year |
+| `month` | Month number |
+| `month_name` | Month name |
+| `quarter` | Calendar quarter |
+
+**Command executed:**
+
+```bash
+dbt seed --profiles-dir ./conf_local --target dev
+```
+
+**Result:** Successfully created the `dbt_dev.calendar` table in Azure PostgreSQL.
+
+The calendar table supports date-based analysis and provides the date dimension for the Gold-layer star schema.
+
+---
+
+### 2. dbt Packages
+
+Updated `packages.yml` and installed reusable dbt packages to support transformations, testing, and date operations.
+
+| Package | Purpose |
+|---|---|
+| `dbt_utils` | Surrogate key generation and reusable utility macros |
+| `dbt_expectations` | Advanced data quality testing |
+| `dbt_date` | Date-related macros |
+
+**Command executed:**
+
+```bash
+dbt deps
+```
+
+Package dependencies are defined in `packages.yml`, and resolved versions are recorded in `package-lock.yml`.
+
+---
+
+### 3. Bronze Layer — Data Quality Improvements
+
+The Bronze layer contains three staging models:
+
+- `stg_orders`
+- `stg_people`
+- `stg_returns`
+
+These models standardize the original Superstore data loaded into Azure PostgreSQL.
+
+Technical metadata includes:
+
+- `dwh_id` — surrogate identifier generated using `dbt_utils.generate_surrogate_key()`.
+- `etl_timestamp` — timestamp indicating when the transformation is executed.
+
+Updated `models/bronze/schema.yml` to strengthen data quality validation, including uniqueness checks.
+
+These tests help identify duplicate records and missing identifiers before data reaches downstream transformations.
+
+---
+
+### 4. Silver Layer — Data Cleaning and Enrichment
+
+The Silver layer prepares detailed transactional data for analytical modeling.
+
+| Model | Purpose |
+|---|---|
+| `int_orders_cleaned` | Cleans invalid quantities using conditional logic |
+| `int_returns_deduplicated` | Deduplicates return records before joining |
+| `int_orders_enriched` | Enriches orders with related business information |
+
+The transformations use SQL joins, `CASE` expressions, surrogate keys, and ETL timestamps.
+
+The Silver layer preserves transaction-level detail without aggregating sales metrics.
+
+#### 4.1 Silver Layer Validation
+
+| Metric | Result |
+|---|---:|
+| Order lines | 9,994 |
+| Distinct orders | 5,009 |
+| Items sold | 37,873 |
+| Total sales | 2,297,201.07 |
+
+These values provide the baseline for validating the Gold-layer aggregations.
+
+---
+
+### 5. Gold Layer — Dimensional Modeling
+
+The Gold layer transforms detailed transactional data into a star schema designed for analytical queries and business intelligence.
+
+Created four dimension tables and one fact table, materialized as PostgreSQL tables.
+
+#### 5.1 Dimension Tables
+
+| Dimension | Records | Description |
+|---|---:|---|
+| `dim_customer` | 793 | Customer identifiers and names |
+| `dim_product` | 1,894 | Product identifiers, names, categories, and subcategories |
+| `dim_shipping` | 4 | Shipping methods |
+| `dim_geo` | 632 | Country/region, state, city, postal code, and region |
+
+Surrogate keys were generated using `dbt_utils.generate_surrogate_key()`.
+
+For `dim_product`, the surrogate key combines `product_id` and `product_name` because `product_id` alone does not uniquely identify every product record.
+
+For `dim_geo`, the surrogate key combines five geographic attributes to distinguish geographic combinations.
+
+#### 5.2 Fact Table — `fct_sales`
+
+Created `fct_sales` to store aggregated sales metrics and references to the dimensions.
+
+**Dimension keys:**
+
+- `product_key`
+- `customer_key`
+- `shipping_id`
+- `geo_id`
+- `date_id`
+
+**Business metrics:**
+
+- `sales_amt`
+- `orders_number`
+- `items_number`
+- `profit_amt`
+- `profit_margin_pct`
+- `avg_discount_pct`
+- `avg_selling_price`
+
+Additional technical columns include `sales_key` and `etl_timestamp`.
+
+The fact table grain is one record per unique combination of product, customer, shipping method, geography, and order date.
+
+#### 5.3 Gold Layer Validation
+
+| Metric | Result |
+|---|---:|
+| Fact table records | 9,986 |
+| Total sales | 2,297,201.07 |
+| Total items sold | 37,873 |
+| Total profit | 286,397.68 |
+
+The sales and quantity totals reconcile with the Silver layer, confirming that aggregation preserves the underlying transactional totals.
+
+---
+
+### 6. Data Quality Testing
+
+Implemented dbt tests across the Bronze, Silver, and Gold layers.
+
+The tests include:
+
+- **`not_null`** — verifies required fields contain values.
+- **`unique`** — checks uniqueness of identifiers.
+- **`relationships`** — validates references between fact and dimension tables.
+- **`accepted_values`** — checks categorical values against allowed lists.
+- **Custom data tests** — validate business rules.
+- **Unit tests** — verify transformation logic using predefined inputs and expected outputs.
+
+These checks help maintain reliable data throughout the transformation pipeline.
+
+---
+
+### 7. dbt Documentation and DAG
+
+Generated updated dbt documentation and reviewed the directed acyclic graph (DAG).
+
+**Commands executed:**
+
+```bash
+dbt docs generate --profiles-dir ./conf_local --target dev
+dbt docs serve --profiles-dir ./conf_local --target dev
+```
+
+The DAG illustrates the transformation flow:
+
+```text
+Azure PostgreSQL Source Tables
+             |
+             v
+       Bronze Layer
+             |
+             v
+       Silver Layer
+             |
+             v
+        Gold Layer
+       /          \
+Dimensions      fct_sales
+
+Calendar Seed ---> Date Relationships
+```
+
+The DAG provides visibility into model dependencies and helps identify the impact of upstream changes.
+
+---
+
+### 8. Star Schema — Logical and Physical Models
+
+Designed a star schema in DBeaver to visualize the relationships between the Gold-layer tables.
+
+The architecture consists of:
+
+- One fact table: `fct_sales`.
+- Four dimension tables: `dim_customer`, `dim_product`, `dim_shipping`, and `dim_geo`.
+- One calendar table: `calendar`.
+
+#### 8.1 Logical Star Schema
+
+The logical star schema illustrates how the fact table connects to the dimension tables through surrogate keys.
+
+The fact table is positioned at the center, while the dimension tables surround it.
+
+Virtual foreign-key relationships were configured in DBeaver to visualize the one-to-many relationships between dimensions and the fact table.
+
+![Superstore Logical Star Schema](./images/Superstore_Star_Schema.png)
+
+#### 8.2 Physical Star Schema
+
+The physical model documents the implemented PostgreSQL tables, including their columns, data types, and key structure.
