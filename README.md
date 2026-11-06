@@ -998,3 +998,90 @@ Virtual foreign-key relationships were configured in DBeaver to visualize the on
 #### 8.2 Physical Star Schema
 
 The physical model documents the implemented PostgreSQL tables, including their columns, data types, and key structure.
+
+## Week 7 — dbt Defer, Makefile, SCD Type 2 & Looker
+
+### Overview
+
+In Week 7, I implemented dbt deferral, automated production artifact generation with a Makefile, created an SCD Type 2 product dimension, and built an interactive Looker dashboard connected to the Gold layer of Azure PostgreSQL.
+
+### 1. dbt Defer & Production Artifacts
+
+Used `--defer` to reference production models during development, avoiding unnecessary rebuilding of upstream dependencies.
+
+Generated production artifacts, including `manifest.json` and `catalog.json`, and automated the process using a Makefile.
+
+**Main commands:**
+
+```bash
+# Generate production artifacts
+make prod-artifacts
+
+# Compile a DEV model using production state
+dbt compile --select int_orders_enriched \
+  --defer --favor-state \
+  --state prod_artifacts \
+  --profiles-dir ./conf_local \
+  --target dev
+
+# Run a DEV model using production state
+dbt run --select int_orders_enriched \
+  --defer --favor-state \
+  --state prod_artifacts \
+  --profiles-dir ./conf_local \
+  --target dev
+```
+
+The production manifest is stored in `superstore_dbt/prod_artifacts/manifest.json`.
+
+### 2. SCD Type 2 — Product Dimension
+
+Implemented Slowly Changing Dimension Type 2 using dbt snapshots to preserve historical product information.
+
+**Main components:**
+- `snap_product.sql` — tracks changes in product attributes.
+- `int_products_current.sql` — prepares current product records.
+- `product_identity_mapping.csv` — maintains product identity mapping.
+- `dim_product.sql` — stores historical and current product versions.
+
+**Main commands:**
+
+```bash
+# Load product identity mapping
+dbt seed --profiles-dir ./conf_local --target dev
+
+# Capture product changes
+dbt snapshot --profiles-dir ./conf_local --target dev
+
+# Rebuild the product dimension
+dbt build --select dim_product \
+  --profiles-dir ./conf_local --target dev
+```
+
+**SCD Type 2 test:** Changed product `OFF-PA-10003177` from `Xerox 1999` to `Xerox v2`.
+
+| Product Name | Status | dbt_valid_to |
+|---|---|---|
+| Xerox 1999 | Historical | Populated |
+| Xerox v2 | Current | NULL |
+
+Both versions are preserved in `dim_product` with distinct surrogate keys.
+
+### 3. Star Schema Validation
+
+Reused the Gold-layer star schema developed in Week 6, consisting of `fct_sales`, `dim_product`, `dim_customer`, `dim_geo`, and `dim_shipping`.
+
+Verified that the fact table joins to both product versions using their respective `product_key` values.
+
+### 4. Looker Dashboard
+
+Built the **Superstore Sales Dashboard** using Looker, connected to the Gold layer of Azure PostgreSQL.
+
+**KPIs:**
+- Total Sales: $2.30M
+- Total Profit: $286.40K
+- Total Items Sold: 37,873
+
+**Visualizations:** Sales by Region, Product Category, Top 10 Sub-Categories, Top 10 States, and Monthly Sales Trend.
+
+![Superstore Sales Dashboard](images/Superstore_looker_dashboard.png)
