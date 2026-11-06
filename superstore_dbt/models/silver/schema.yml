@@ -55,3 +55,10 @@ models:
         description: "Regional manager assigned to the order."
         data_tests:
           - not_null
+
+
+  - name: int_products_current
+    description: >
+      Prepares the current product records from Superstore order data,
+      providing a consistent product identity and attributes for
+      SCD Type 2 snapshot processing.
